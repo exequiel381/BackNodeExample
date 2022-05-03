@@ -1,9 +1,9 @@
 const { Sequelize } = require("sequelize");
 
-const host = "181.239.140.216";
-const user = "nortesdw";
-const password = "nortesdw";
-const database = "nortesdw";
+const host = "localhost";
+const user = "root";
+const password = "";
+const database = "practico_ia";
 
 const sequelize = new Sequelize(database, user, password, {
   host: host,
