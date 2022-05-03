@@ -1,9 +1,9 @@
-const express = require("express");
-const router = express.Router();
+// const express = require("express");
+// const router = express.Router();
 
-const DfController = require("../controllers/DialogFlowController");
+// const DfController = require("../controllers/DialogFlowController");
 
-router.get("/getdata", DfController.getData);
-router.post("/postdata", DfController.postData);
+// router.get("/getdata", DfController.getData);
+// router.post("/postdata", DfController.postData);
 
-module.exports = router;
+// module.exports = router;

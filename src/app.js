@@ -22,7 +22,7 @@ app.use(bodyParser.json());
 //app.use(morgan("dev"));
 
 // importamos las rutas
-const dialogFlow = require("./routes/dialogFlow");
+// const dialogFlow = require("./routes/dialogFlow");
 
 // Rutas
 app.get("/", (req, res) => {
