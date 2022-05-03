@@ -1,8 +1,8 @@
 const { Sequelize } = require("sequelize");
 
 const host = "localhost";
-const user = "root";
-const password = "";
+const user = "exe";
+const password = "bgnyvxpg";
 const database = "practico_ia";
 
 const sequelize = new Sequelize(database, user, password, {
