@@ -19,7 +19,8 @@
         "mercadopago": "^1.5.12",
         "mysql2": "^2.3.3",
         "npm-watch": "^0.11.0",
-        "sequelize": "^6.19.0"
+        "sequelize": "^6.19.0",
+        "sequelize-cli": "^6.4.1"
     },
     "devDependencies": {
         "nodemon": "^2.0.15"
