@@ -29,6 +29,6 @@ app.get("/", (req, res) => {
   res.send("<h1>Bienvenido a la API IA</h1>");
 });
 
-app.use("/api/dialogFlow", dialogFlow);
+// app.use("/api/dialogFlow", dialogFlow);
 
 module.exports = app;
