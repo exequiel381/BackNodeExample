@@ -33,7 +33,7 @@ app.get("/", (req, res) => {
 const sequelize = require("./config/db");
 
 app.get("/productos", async (req, res) => {
-  const productos = await productos.findAll({
+  const productosDB = await productos.findAll({
     attributes: ["id", "descripcion", "precio", "stock"], // puedo traer todo lo que quiera aunque no las defina en el modelo
   });
   res.send(productos);
