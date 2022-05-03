@@ -6,7 +6,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 
 //server
-require("./config/db");
+// require("./config/db");
 const port = 3000;
 app.listen(port, () => {
   console.log(`Servidor corriendo en el puerto: http://localhost:${port}`);

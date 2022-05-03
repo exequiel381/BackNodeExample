@@ -5,7 +5,7 @@ const user = "root";
 const password = "";
 const database = "practico_ia";
 
-const sequelize = new Sequelize(database, user, {
+const sequelize = new Sequelize(database, user, password, {
   host: host,
   dialect: "mysql",
   define: {
