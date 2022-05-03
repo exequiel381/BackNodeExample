@@ -4,6 +4,7 @@ const mercadopago = require("mercadopago");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const helmet = require("helmet");
+const productos = require("./model/productos");
 
 //server
 require("./config/db");
@@ -27,6 +28,15 @@ app.use(bodyParser.json());
 // Rutas
 app.get("/", (req, res) => {
   res.send("<h1>Bienvenido a la API IA</h1>");
+});
+
+const sequelize = require("./config/db");
+
+app.get("/productos", async (req, res) => {
+  const productos = await productos.findAll({
+    attributes: ["id", "descripcion", "precio", "stock"], // puedo traer todo lo que quiera aunque no las defina en el modelo
+  });
+  res.send(productos);
 });
 
 // app.use("/api/dialogFlow", dialogFlow);
