@@ -6,7 +6,8 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "watch": "npx nodemon src/app",
-        "start": "node src/app.js"
+        "start": "node src/app.js",
+        "build" : "webpack --config webpack.config.js"
     },
     "keywords": [],
     "author": "",
