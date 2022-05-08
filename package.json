@@ -7,7 +7,7 @@
         "test": "echo \"Error: no test specified\" && exit 1",
         "watch": "npx nodemon src/app",
         "start": "node src/app.js",
-        "build" : "webpack --config webpack.config.js"
+        "build": "npm run build"
     },
     "keywords": [],
     "author": "",
@@ -24,6 +24,7 @@
         "sequelize-cli": "^6.4.1"
     },
     "devDependencies": {
+        "ngrok": "^4.3.1",
         "nodemon": "^2.0.15"
     }
 }
