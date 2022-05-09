@@ -4,11 +4,6 @@ const mercadopago = require("mercadopago");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const helmet = require("helmet");
-const producto = require("./model/producto");
-const lineaPedido = require("./model/lineaPedido");
-const lineaReserva = require("./model/lineaReserva");
-const pedido = require("./model/pedido");
-const reserva = require("./model/reserva");
 
 //server
 require("./config/db");
@@ -35,33 +30,35 @@ app.get("/", (req, res) => {
 });
 
 const sequelize = require("./config/db");
-const pedido = require("./model/pedido");
-const lineaPedido = require("./model/lineaPedido");
+const productoDB = require("./model/producto");
+const lineaPedidoDB = require("./model/lineaPedido");
+const lineaReservaDB = require("./model/lineaReserva");
+const pedidoDB = require("./model/pedido");
+const reservaDB = require("./model/reserva");
 
-const findProduct = (idProducto) => {
-  let p = producto.findAll({
+const findProduct = async (idProducto) => {
+  let p = await productoDB.findAll({
     //ver si no me trae una lista
     where: {
       id: idProducto,
     },
   });
-
-  return p;
+  return p[0].dataValues;
 };
 
-const findOrder = (dniCliente) => {
-  let pedido = pedido.findAll({
+const findOrder = async (dniCliente) => {
+  let pedido = await pedidoDB.findAll({
     where: {
       dniCliente: dniCliente,
       estado: "pendiente",
     },
   });
 
-  return pedido;
+  return pedido[0].dataValues;
 };
 
-const findReservation = (id) => {
-  let r = reserva.findAll({
+const findReservation = async (dniCliente) => {
+  let r = await reservaDB.findAll({
     where: {
       dniCliente: dniCliente,
       estado: "pendiente",
@@ -72,7 +69,7 @@ const findReservation = (id) => {
 };
 
 const getTotalPedido = (idPedido) => {
-  let lineasP = lineaPedido.findAll({
+  let lineasP = lineaPedidoDB.findAll({
     where: {
       idPedido: idPedido,
     },
@@ -86,7 +83,7 @@ const getTotalPedido = (idPedido) => {
 
 app.post("/productos", async (req, res) => {
   console.log(req.body);
-  const tag = req.body.fulfillmentInfo.tag;
+  const tag = req.body.tag;
 
   if (!!tag) {
     let dniCliente = req.body.dniCliente;
@@ -97,32 +94,43 @@ app.post("/productos", async (req, res) => {
     switch (tag) {
       case "crear_pedido": // si quiere hacer pedido, con el dni creamos un pedido
         try {
-          const pedido = await pedido.create({
+          const pedido = await pedidoDB.create({
             dniCliente,
             estado: "pendiente",
           });
           res.json(true);
         } catch (error) {
-          res.json(false);
+          res.json(error);
         }
         break;
       case "agregar_producto": //verificamos stock, si hay lo agregamos al pedido que se encuentra "abierto" con el dni del cliente
-        idProducto = req.body.idProducto;
-        cantidad = req.body.cantidad;
-        producto = findProduct(idProducto);
-        if (producto.stock >= cantidad) {
-          let pedido = findOrder(dniCliente);
-          lineaPedido.create({
-            idProducto,
-            cantidad,
-            idPedido: pedido.id,
-            subTotal: producto.precio * cantidad,
-          });
+        try {
+          idProducto = req.body.idProducto;
+          cantidad = req.body.cantidad;
+          productoPromise = findProduct(idProducto);
+          productoPromise.then((producto) => {
+            console.log(producto);
+            let stock = producto.stock;
+            if (stock >= cantidad) {
+              let pedidoPromise = findOrder(dniCliente);
+              pedidoPromise.then((pedido) => {
+                lineaPedidoDB.create({
+                  idProducto,
+                  cantidad,
+                  idPedido: pedido.id,
+                  subTotal: producto.precio * cantidad,
+                });
+              });
 
-          res.json(true);
-        } else {
-          res.json(false);
+              res.json(true);
+            } else {
+              res.json(false);
+            }
+          });
+        } catch (error) {
+          res.json(error);
         }
+
         break;
       case "agregar_reserva": //Agregamos una reserva si no tenemos stock, la dejamos abierta con el dni del cliente.
         //tomamos producto cantidad y creamos una  reserva(un producto a muchas reservas , una reserva a un producto) [id,codigo(armar string con fecha pj),idProducto,cantidadSolicitada]
@@ -132,7 +140,7 @@ app.post("/productos", async (req, res) => {
         let reservation = findReservation(dniCliente);
 
         if (reservation) {
-          lineaReserva.create({
+          lineaReservaDB.create({
             idProducto,
             cantidad,
             idReserva: reservation.id,
@@ -140,11 +148,11 @@ app.post("/productos", async (req, res) => {
 
           res.json(true);
         } else {
-          reservation = await reserva.create({
+          reservation = await reservaDB.create({
             dniCliente,
             estado: "pendiente",
           });
-          lineaReserva.create({
+          lineaReservaDB.create({
             idProducto,
             cantidad,
             idReserva: reservation.id,
@@ -161,7 +169,7 @@ app.post("/productos", async (req, res) => {
         let orderToFinish = findOrder(dniCliente);
 
         if (reservationToFinish) {
-          await reserva.update(
+          await reservaDB.update(
             { estado: "finalizado" },
             {
               where: {
@@ -172,7 +180,7 @@ app.post("/productos", async (req, res) => {
         }
 
         if (orderToFinish) {
-          await pedido.update(
+          await pedidoDB.update(
             { estado: "finalizado" },
             {
               where: {
@@ -192,6 +200,9 @@ app.post("/productos", async (req, res) => {
         res.json(response);
 
         break;
+      default: {
+        res.json("No hubo coincidencias");
+      }
     }
   }
 
