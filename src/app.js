@@ -83,7 +83,7 @@ const getTotalPedido = async (idPedido) => {
 };
 
 app.get("/getProductosTest", async (req, res) => {
-  const productosDB = await producto.findAll();
+  const productosDB = await productoDB.findAll();
   res.send(productosDB);
 });
 
