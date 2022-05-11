@@ -82,6 +82,11 @@ const getTotalPedido = async (idPedido) => {
   } else return 0;
 };
 
+app.get("/getProductosTest", async (req, res) => {
+  const productosDB = await producto.findAll();
+  res.send(productosDB);
+});
+
 app.post("/productos", async (req, res) => {
   console.log(req.body);
   const tag = req.body.tag;
@@ -235,9 +240,6 @@ app.post("/productos", async (req, res) => {
       }
     }
   }
-
-  // const productosDB = await producto.findAll();
-  // res.send(productosDB);
 });
 
 // app.use("/api/dialogFlow", dialogFlow);
