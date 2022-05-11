@@ -228,7 +228,7 @@ app.post("/productos", async (req, res) => {
 
         return res.json({
           codigoReserva: codeReservation,
-          total: "El total del pedido es : " + parseInt(totalOrder),
+          total: parseInt(totalOrder),
         });
       default: {
         return res.status(200).json("No hubo coincidencias");
