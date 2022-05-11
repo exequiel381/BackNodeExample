@@ -8,7 +8,7 @@ const lineaReserva = sequelize.define("lineasReserva", {
   },
   cantidad: { type: DataTypes.INTEGER },
   idProducto: { type: DataTypes.INTEGER },
-  idPedido: { type: DataTypes.INTEGER },
+  idReserva: { type: DataTypes.INTEGER },
 });
 
 module.exports = lineaReserva;

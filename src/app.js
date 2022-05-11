@@ -43,7 +43,7 @@ const findProduct = async (idProducto) => {
       id: idProducto,
     },
   });
-  return p[0].dataValues;
+  return p.length > 0 ? p[0].dataValues : null;
 };
 
 const findOrder = async (dniCliente) => {
@@ -54,7 +54,7 @@ const findOrder = async (dniCliente) => {
     },
   });
 
-  return pedido[0].dataValues;
+  return pedido.length > 0 ? pedido[0].dataValues : null;
 };
 
 const findReservation = async (dniCliente) => {
@@ -64,21 +64,22 @@ const findReservation = async (dniCliente) => {
       estado: "pendiente",
     },
   });
-
-  return r;
+  return r.length > 0 ? r[0].dataValues : null;
 };
 
-const getTotalPedido = (idPedido) => {
-  let lineasP = lineaPedidoDB.findAll({
+const getTotalPedido = async (idPedido) => {
+  let lineasP = await lineaPedidoDB.findAll({
     where: {
       idPedido: idPedido,
     },
   });
 
-  const sumall = lineasP
-    .map((item) => item.subTotal)
-    .reduce((prev, curr) => prev + curr, 0);
-  return sumall;
+  if (lineasP.length > 0) {
+    const sumall = lineasP
+      .map((item) => item.subTotal)
+      .reduce((prev, curr) => prev + curr, 0);
+    return sumall;
+  } else return 0;
 };
 
 app.post("/productos", async (req, res) => {
@@ -92,9 +93,14 @@ app.post("/productos", async (req, res) => {
     let producto;
 
     switch (tag) {
-      case "crear_pedido": // si quiere hacer pedido, con el dni creamos un pedido
+      case "crear_pedido_reserva": // si quiere hacer pedido, con el dni creamos un pedido
         try {
           const pedido = await pedidoDB.create({
+            dniCliente,
+            estado: "pendiente",
+          });
+
+          reservaDB.create({
             dniCliente,
             estado: "pendiente",
           });
@@ -134,74 +140,98 @@ app.post("/productos", async (req, res) => {
         break;
       case "agregar_reserva": //Agregamos una reserva si no tenemos stock, la dejamos abierta con el dni del cliente.
         //tomamos producto cantidad y creamos una  reserva(un producto a muchas reservas , una reserva a un producto) [id,codigo(armar string con fecha pj),idProducto,cantidadSolicitada]
-        idProducto = req.body.idProducto;
-        cantidad = req.body.cantidad;
-        producto = findProduct();
-        let reservation = findReservation(dniCliente);
+        try {
+          idProducto = req.body.idProducto;
+          cantidad = req.body.cantidad;
+          productoPromise = findProduct(idProducto);
+          productoPromise.then((prod) => {
+            //comprobar si hay producto -- FALTA
+            let reservationPromise = findReservation(dniCliente);
+            reservationPromise.then((reservation) => {
+              if (reservation) {
+                let idReserva = reservation.id;
+                console.log(idReserva);
+                lineaReservaDB.create({
+                  idReserva: reservation.id,
+                  idProducto,
+                  cantidad,
+                });
 
-        if (reservation) {
-          lineaReservaDB.create({
-            idProducto,
-            cantidad,
-            idReserva: reservation.id,
-          });
+                return res.json(true);
+              } else {
+                return res.json(false);
+              }
 
-          res.json(true);
-        } else {
-          reservation = await reservaDB.create({
-            dniCliente,
-            estado: "pendiente",
+              res.json(true);
+            });
           });
-          lineaReservaDB.create({
-            idProducto,
-            cantidad,
-            idReserva: reservation.id,
-          });
-
-          res.json(true);
+        } catch (error) {
+          res.json(error.message);
         }
 
         break;
       case "verificar_reserva": //ingresa un codigo de reserva y vemos si el producto asociado tiene stock
         break;
-      case "crear_pedido_reserva": //finalizamos el pedido y la reserva pendiente si esq las hay.
-        let reservationToFinish = findReservation(dniCliente);
-        let orderToFinish = findOrder(dniCliente);
+      case "finalizar_pedido_reserva": //finalizamos el pedido y la reserva pendiente si esq las hay.
+        let codeReservation;
+        let totalOrder;
+        let orderId;
+        let response;
 
-        if (reservationToFinish) {
-          await reservaDB.update(
-            { estado: "finalizado" },
-            {
-              where: {
-                id: reservationToFinish.id,
-              },
+        orderId = await findOrder(dniCliente)
+          .then((order) => {
+            if (order !== null) {
+              pedidoDB.update(
+                { estado: "finalizado" }, //poner pendiente para PROBAR
+                {
+                  where: {
+                    id: order.id,
+                  },
+                }
+              );
+              return order.id;
             }
-          );
-        }
+          })
+          .catch((error) => {
+            return res.json("No se pudo finalizar en Order");
+          });
 
-        if (orderToFinish) {
-          await pedidoDB.update(
-            { estado: "finalizado" },
-            {
-              where: {
-                id: orderToFinish.id,
-              },
+        codeReservation = await findReservation(dniCliente)
+          .then((reservation) => {
+            if (reservation !== null) {
+              reservaDB.update(
+                { estado: "finalizado" }, //poner pendiente para PROBAR
+                {
+                  where: {
+                    id: reservation.id,
+                  },
+                }
+              );
+              return reservation.id + "_" + reservation.dniCliente;
             }
-          );
-        }
+          })
+          .catch((error) => {
+            return res.json("No se pudo finalizar en Reservation");
+          });
 
-        let response = {
-          codigoReserva: reservationToFinish
-            ? reservationToFinish.id + "_" + reservationToFinish.dniCliente
-            : "",
-          totalPedido: orderToFinish ? getTotalPedido(orderToFinish.id) : "0",
-        };
+        totalOrder = await getTotalPedido(orderId) //NO TENGO UN ORDER ID AUN , debo meterlo en la promesa
+          .then((total) => {
+            totalOrder = total;
+            return total;
+          })
+          .catch((error) => {
+            return res.status(400).json({
+              status_code: 0,
+              error_msg: "Require Params Missing",
+            });
+          });
 
-        res.json(response);
-
-        break;
+        return res.json({
+          codigoReserva: codeReservation,
+          total: "El total del pedido es : " + parseInt(totalOrder),
+        });
       default: {
-        res.json("No hubo coincidencias");
+        return res.status(200).json("No hubo coincidencias");
       }
     }
   }
