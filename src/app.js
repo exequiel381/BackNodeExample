@@ -74,12 +74,24 @@ const getTotalPedido = async (idPedido) => {
     },
   });
 
+  let sumall = 0.0;
   if (lineasP.length > 0) {
-    const sumall = lineasP
-      .map((item) => item.subTotal)
-      .reduce((prev, curr) => prev + curr, 0);
+    lineasP.forEach((item) => {
+      sumall = sumall + parseFloat(item.subTotal);
+    });
+
     return sumall;
   } else return 0;
+};
+
+const verifyReservationLines = async (idReservation) => {
+  let lineasR = await lineaReservaDB.findAll({
+    where: {
+      idReserva: idReservation,
+    },
+  });
+
+  return lineasR.length > 0;
 };
 
 app.get("/getProductosTest", async (req, res) => {
@@ -195,15 +207,16 @@ app.post("/productos", async (req, res) => {
         });
         break;
       case "finalizar_pedido_reserva": //finalizamos el pedido y la reserva pendiente si esq las hay.
-        let codeReservation;
-        let totalOrder;
+        let codeReservation = "-";
+        let totalOrder = 0;
         let orderId;
+        let direccion = req.body.sessionInfo.parameters.direccion;
 
         orderId = await findOrder(dniCliente)
           .then((order) => {
             if (order !== null) {
               pedidoDB.update(
-                { estado: "finalizado" }, //poner pendiente para PROBAR
+                { estado: "finalizado", direccion: direccion }, //poner pendiente para PROBAR
                 {
                   where: {
                     id: order.id,
@@ -217,7 +230,7 @@ app.post("/productos", async (req, res) => {
             return res.json("No se pudo finalizar en Order");
           });
 
-        codeReservation = await findReservation(dniCliente)
+        let reservation = await findReservation(dniCliente)
           .then((reservation) => {
             if (reservation !== null) {
               reservaDB.update(
@@ -228,12 +241,17 @@ app.post("/productos", async (req, res) => {
                   },
                 }
               );
-              return reservation.id + "_" + reservation.dniCliente;
+              return reservation;
             }
           })
           .catch((error) => {
             return res.json("No se pudo finalizar en Reservation");
           });
+
+        let HaveReservarionLines = await verifyReservationLines(reservation.id);
+        if (HaveReservarionLines) {
+          codeReservation = reservation.id + "_" + reservation.dniCliente;
+        }
 
         totalOrder = await getTotalPedido(orderId) //NO TENGO UN ORDER ID AUN , debo meterlo en la promesa
           .then((total) => {
