@@ -89,10 +89,10 @@ app.get("/getProductosTest", async (req, res) => {
 
 app.post("/productos", async (req, res) => {
   console.log(req.body);
-  const tag = req.body.tag;
+  const tag = req.body.fulfillmentInfo.tag;
 
   if (!!tag) {
-    let dniCliente = req.body.dniCliente;
+    let dniCliente = req.body.sessionInfo.parameters.dni;
     let idProducto;
     let cantidad;
     let producto;
@@ -116,11 +116,10 @@ app.post("/productos", async (req, res) => {
         break;
       case "agregar_producto": //verificamos stock, si hay lo agregamos al pedido que se encuentra "abierto" con el dni del cliente
         try {
-          idProducto = req.body.idProducto;
-          cantidad = req.body.cantidad;
+          idProducto = req.body.sessionInfo.parameters.numproduct;
+          cantidad = req.body.sessionInfo.parameters.number;
           productoPromise = findProduct(idProducto);
           productoPromise.then((producto) => {
-            console.log(producto);
             let stock = producto.stock;
             if (stock >= cantidad) {
               let pedidoPromise = findOrder(dniCliente);
@@ -133,9 +132,21 @@ app.post("/productos", async (req, res) => {
                 });
               });
 
-              res.json(true);
+              res.status(200).send({
+                sessionInfo: {
+                  parameters: {
+                    estado: "constock",
+                  },
+                },
+              });
             } else {
-              res.json(false);
+              res.status(200).send({
+                sessionInfo: {
+                  parameters: {
+                    estado: "sinstock",
+                  },
+                },
+              });
             }
           });
         } catch (error) {
@@ -146,8 +157,8 @@ app.post("/productos", async (req, res) => {
       case "agregar_reserva": //Agregamos una reserva si no tenemos stock, la dejamos abierta con el dni del cliente.
         //tomamos producto cantidad y creamos una  reserva(un producto a muchas reservas , una reserva a un producto) [id,codigo(armar string con fecha pj),idProducto,cantidadSolicitada]
         try {
-          idProducto = req.body.idProducto;
-          cantidad = req.body.cantidad;
+          idProducto = req.body.sessionInfo.parameters.numproduct;
+          cantidad = req.body.sessionInfo.parameters.number;
           productoPromise = findProduct(idProducto);
           productoPromise.then((prod) => {
             //comprobar si hay producto -- FALTA
@@ -155,7 +166,6 @@ app.post("/productos", async (req, res) => {
             reservationPromise.then((reservation) => {
               if (reservation) {
                 let idReserva = reservation.id;
-                console.log(idReserva);
                 lineaReservaDB.create({
                   idReserva: reservation.id,
                   idProducto,
@@ -166,8 +176,6 @@ app.post("/productos", async (req, res) => {
               } else {
                 return res.json(false);
               }
-
-              res.json(true);
             });
           });
         } catch (error) {
@@ -177,11 +185,19 @@ app.post("/productos", async (req, res) => {
         break;
       case "verificar_reserva": //ingresa un codigo de reserva y vemos si el producto asociado tiene stock
         break;
+      case "limpiar_estado":
+        res.status(200).send({
+          sessionInfo: {
+            parameters: {
+              estado: "",
+            },
+          },
+        });
+        break;
       case "finalizar_pedido_reserva": //finalizamos el pedido y la reserva pendiente si esq las hay.
         let codeReservation;
         let totalOrder;
         let orderId;
-        let response;
 
         orderId = await findOrder(dniCliente)
           .then((order) => {
@@ -231,10 +247,15 @@ app.post("/productos", async (req, res) => {
             });
           });
 
-        return res.json({
-          codigoReserva: codeReservation,
-          total: parseInt(totalOrder),
+        return res.status(200).send({
+          sessionInfo: {
+            parameters: {
+              codigoReserva: codeReservation,
+              total: parseInt(totalOrder),
+            },
+          },
         });
+
       default: {
         return res.status(200).json("No hubo coincidencias");
       }
